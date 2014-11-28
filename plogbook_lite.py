@@ -136,8 +136,8 @@ class PlogBookLite:
                 msg = f.read()
         # If markdown convert to html
         print(''.center(80, '-'))
-        if markdown:
-            msg = self.markdown_to_html(msg)
+        if markdown and MARKDOWN:
+            msg = markdown2.markdown(msg)
         # Writing to disk
         save_directory = os.path.join(self.location, category)
         if MARKDOWN and markdown:
@@ -159,11 +159,6 @@ class PlogBookLite:
             with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
                 css_file.write(DEFAULT_CSS)
 
-    @staticmethod
-    def markdown_to_html(text):
-            if MARKDOWN:
-                text = markdown2.markdown(text)
-            return text
 
     @staticmethod
     def make_log_html(msg, cat, title, date):
