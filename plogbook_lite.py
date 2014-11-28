@@ -1,12 +1,16 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from __future__ import print_function
 import os
+import re
 import sys
 import fnmatch
 import argparse
 import tempfile
 import subprocess
 from datetime import datetime
+
+## External package import (things that don't come with python and are optional)
+# Markdown2 is for markdown to html conversion
 try:
     import markdown2
 except ImportError:
@@ -14,11 +18,15 @@ except ImportError:
 else:
     MARKDOWN = True
 
-__author__ = 'Granitosaurus Dex'
-# multiversioning
+## multiversioning
 VERSION = sys.version_info[0]
 IS_3 = True if VERSION == 3 else False
-input = input if IS_3 else raw_input
+if IS_3:
+    from urllib.request import urlopen
+    input = input
+else:
+    from urllib2 import urlopen
+    input = raw_input
 
 # ---------------------------------------------------------------------------------------------------------------------
 # EDIT these to change css and html.
@@ -111,7 +119,7 @@ class PlogBookLite:
     def __init__(self, location=None):
         self.location = location or os.getcwd()
 
-    def write_plog(self, editor=False, markdown=False):
+    def write_plog(self, editor=False, markdown=False, convert_img=False):
         """
         This method is the main method that is runned to start the process of recording the plog
         """
@@ -121,8 +129,14 @@ class PlogBookLite:
         print('|' + 'Writting Plog for {}'.format(date).center(78) + '|')
         print(''.center(80, '-'))
         category = input('Category: ')
+        save_directory = os.path.join(self.location, category)
+        if not os.path.exists(save_directory):
+            os.makedirs(save_directory)
         title = input('Title: ')
+        file_name = os.path.join(save_directory, title + '.html')
         print(''.center(80, '-'))
+
+        # For message input use editor if editor is true otherwise use stdin.read()
         if not editor:
             print('Log:')
             msg = sys.stdin.read()
@@ -134,36 +148,66 @@ class PlogBookLite:
             subprocess.call([editor, n])
             with open(n) as f:
                 msg = f.read()
+
         # If markdown convert to html
         print(''.center(80, '-'))
         if markdown and MARKDOWN:
             msg = markdown2.markdown(msg)
-        # Writing to disk
-        save_directory = os.path.join(self.location, category)
-        if MARKDOWN and markdown:
             print('|' + 'converting log message to html(from markdown)'.center(78, ' ') + '|')
+
+        # Converting html (bells and whistles)
+        if convert_img:
+            print('|' + 'converting html message through filters:'.center(78, ' ') + '|')
+            print('|' + '-{}'.format('localize image' if convert_img else '').center(78, ' ') + '|')
+            msg = self.convert_html(msg, save_directory=save_directory, localize_img=convert_img)
+
+        # Making the plog from the data
         print('|' + 'Saving plog <{}.html>'.format(title).center(78, ' ') + '|')
         print('|' + 'to {}'.format(save_directory).center(78, ' ') + '|')
         print(''.center(80, '_'))
-        # Making the plog from the data
         plog = self.make_log_html(msg=msg,
                                   cat=category,
                                   title=title,
                                   date=date)
 
-        if not os.path.exists(save_directory):
-            os.makedirs(save_directory)
-        with open(os.path.join(save_directory, title + '.html'), 'w') as html_file:
+        # Saving to disk
+        with open(file_name, 'w') as html_file:
             html_file.write(plog)
         if not os.path.exists(os.path.join(save_directory, 'theme.css')):
             with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
                 css_file.write(DEFAULT_CSS)
 
+    def convert_html(self, html, save_directory, localize_img=False):
+        """
+        Makes html text go through various conversions
+        :param html: html string
+        :param save_directory: directory where html file will be saved
+        :param localize_img: localizes images in the source and store them in location/title/images/
+        :return: updated html string
+        """
+        if localize_img:
+            #Handle file location
+            image_location = os.path.join(save_directory, 'images')
+            if not os.path.exists(image_location):
+                os.makedirs(image_location)
+            # Find tags and replace them with new ones
+            img_tags = re.findall('img.*?src="(.*?)"', html)
+            for src in img_tags:
+                new_src = ''.join(re.findall('(\w+|\.)', src))
+                html.replace(src, new_src)
+            # Downloading and saving
+                with open(os.path.join(image_location, new_src), 'wb') as image_file:
+                    image_source = urlopen(src).read()
+                    image_file.write(image_source)
+        return html
+
+
 
     @staticmethod
     def make_log_html(msg, cat, title, date):
         """
-        Converts data to html file
+        Converts data to html file.
+        Turns all input new lines into paragraphs
         """
         msg = ''.join(['<p>{msg}</p>'.format(msg=msg) for msg in msg.split('\n')])
         log = DEFAULT_FORMAT(msg=msg, cat=cat, date=date, title=title)
@@ -236,6 +280,8 @@ def run():
     parser = argparse.ArgumentParser(description='Personal Log Book')
     parser.add_argument('--write', '-w', help='[default] write a plog', action='store_true')
     parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
+    parser.add_argument('--localize_images', '-li', help='Localizes images found in @src and store them in plog folder '
+                                                         'under images', action='store_true')
     parser.add_argument('--find', help='finds plogs in the curent directory', action='store_true')
     parser.add_argument('--findr', help='finds plogs in the curent directory recursively', action='store_true')
     parser.add_argument('--pretty', '-p', help='prettiefies output of --find and --findr', action='store_true')
@@ -250,7 +296,7 @@ def run():
                 print('You need to install package "markdown2" for markdown conversion support, '
                       'try: sudo pip install markdown2\nNo conversion will be made!')
                 args.markdown = False
-        plogbook.write_plog(editor=args.editor, markdown=args.markdown)
+        plogbook.write_plog(editor=args.editor, markdown=args.markdown, convert_img=args.localize_images)
 
     if args.find:
         plogbook.find_plogs(recursive=False, pretty_output=args.pretty)
