@@ -136,18 +136,21 @@ class PlogBookLite:
         file_name = os.path.join(save_directory, title + '.html')
         print(''.center(80, '-'))
 
+        ## message input
         # For message input use editor if editor is true otherwise use stdin.read()
         if not editor:
             print('Log:')
             msg = sys.stdin.read()
         else:
-            f = tempfile.NamedTemporaryFile(mode='w+t', delete=False)
-            n = f.name
-            f.close()
-            print('Log Input will be taken from editor: {}'.format(editor))
-            subprocess.call([editor, n])
-            with open(n) as f:
-                msg = f.read()
+            with tempfile.NamedTemporaryFile(mode='w+t') as temp_file:
+                print('Log Input will be taken from editor: {}'.format(editor))
+                subprocess.call([editor, temp_file.name])
+                while True:
+                    with open(temp_file.name) as f:
+                        contents = f.read()
+                        if contents:
+                            msg = contents
+                            break
 
         # If markdown convert to html
         print(''.center(80, '-'))
@@ -206,7 +209,7 @@ class PlogBookLite:
     @staticmethod
     def make_log_html(msg, cat, title, date):
         """
-        Converts data to html file.
+        Converts data to html fil.
         Turns all input new lines into paragraphs
         """
         msg = ''.join(['<p>{msg}</p>'.format(msg=msg) for msg in msg.split('\n')])
