@@ -9,7 +9,7 @@ import tempfile
 import subprocess
 from datetime import datetime
 
-## External package import (things that don't come with python and are optional)
+# # External package import (things that don't come with python and are optional)
 # Markdown2 is for markdown to html conversion
 try:
     import markdown2
@@ -18,14 +18,16 @@ except ImportError:
 else:
     MARKDOWN = True
 
-## multiversioning
+# # multiversioning
 VERSION = sys.version_info[0]
 IS_3 = True if VERSION == 3 else False
 if IS_3:
     from urllib.request import urlopen
+
     input = input
 else:
     from urllib2 import urlopen
+
     input = raw_input
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -48,8 +50,9 @@ DEFAULT_CSS = """
         border-collapse: collapse;
         background-color: #0b0b0b;
     }
-
-    table, td, th {
+    <!-- this is more flexible even though ugly -->
+    table#plog_table, td#category_value, th#category_header, td#date_value, th#date_header,
+    td#title_value, th#title_header, td#msg_value, th#msg_header {
         border: 1px solid black;
         padding: 5px;
     }
@@ -59,34 +62,36 @@ DEFAULT_CSS = """
         width: 100px;
     }
 
-    th#title_header, th#msg_header, td#title, td#msg {
-        background-color: #0b0b0b;
-    }
-
-    td#msg, th#msg_header {
+    td#msg_value, th#msg_header {
         background-color: #0f0f0f;
     }
+
+    th.main_header {
+    background-color: #0f0f0f;
+    border: 1px solid black;
+        padding: 5px;
+    }
 """
-DEFAULT_FORMAT = lambda msg, cat, date, title: DEFAULT_HTML.format(msg=msg, cat=cat, date=date, title=title)
+DEFAULT_HTML_FORMAT = lambda msg, cat, date, title: DEFAULT_HTML.format(msg=msg, cat=cat, date=date, title=title)
 DEFAULT_HTML = """
 <!--default template for a plog-->
         <head>
         <link rel="stylesheet" type="text/css" href="theme.css">
         </head>
-        <table>
+        <table id='plog_table'>
         <tr>
-            <th class='meta_header'>
+            <th id='category_header'>
             Category:
             </th>
-            <td class='meta_text'>
+            <td id='category_value'>
             {cat}
             </td>
         </tr>
         <tr>
-            <th class='meta_header'>
+            <th id='date_header'>
             Date:
             </th>
-            <td class='meta_text'>
+            <td id='date_value'>
             {date}
             </td>
         </tr>
@@ -94,7 +99,7 @@ DEFAULT_HTML = """
             <th id='title_header'>
             Title:
             </th>
-            <td id='title'>
+            <td id='title_value'>
             {title}
             </td>
         </tr>
@@ -102,11 +107,53 @@ DEFAULT_HTML = """
             <th id='msg_header'>
             Log:
             </th>
-            <td id='msg'>
+            <td id='msg_value'>
             {msg}
             </td>
         </tr>
         </table>
+"""
+DEFAULT_MAIN_FORMAT = lambda items: DEFAULT_MAIN.format(msg=items)
+DEFAULT_MAIN = """
+<!--default template for a plog-->
+<head>
+    <link rel="stylesheet" type="text/css" href="theme.css">
+</head>
+<table id='main_table'>
+    <tr>
+        <th class='main_header'>
+            Entry #
+        </th>
+        <th class='main_header'>
+            Date
+        </th>
+        <th class='main_header'>
+            Title
+        </th>
+        <th class='main_header'>
+            Location
+        </th>
+    </tr>
+    {items}
+</table>
+"""
+DEFAULT_MAIN_ITEM_FORMAT = lambda entry, date, relative_loation, title, location: \
+    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_loation=relative_loation, title=title, location=location)
+DEFAULT_MAIN_ITEM = """
+    <tr>
+        <td id='header_entry'>
+            {entry}
+        </td>
+        <td id='date_entry'>
+            {date}
+        </td>
+        <td id='title_entry'>
+            <a href='{relative_location}'>{title}</a>
+        </td>
+        <td id='location_entry'>
+            {location}
+        </td>
+    </tr>
 """
 #----------------------------------------------------------------------------------------------------------------------
 
@@ -198,12 +245,11 @@ class PlogBookLite:
             for src in img_tags:
                 new_src = ''.join(re.findall('(\w+|\.)', src))
                 html.replace(src, new_src)
-            # Downloading and saving
+                # Downloading and saving
                 with open(os.path.join(image_location, new_src), 'wb') as image_file:
                     image_source = urlopen(src).read()
                     image_file.write(image_source)
         return html
-
 
 
     @staticmethod
@@ -213,7 +259,7 @@ class PlogBookLite:
         Turns all input new lines into paragraphs
         """
         msg = ''.join(['<p>{msg}</p>'.format(msg=msg) for msg in msg.split('\n')])
-        log = DEFAULT_FORMAT(msg=msg, cat=cat, date=date, title=title)
+        log = DEFAULT_HTML_FORMAT(msg=msg, cat=cat, date=date, title=title)
         return log
 
     def find_plogs(self, recursive=True, pretty_output=False):
