@@ -191,6 +191,7 @@ class PlogBookLite:
 
         ## message input
         # For message input use editor if editor is true otherwise use stdin.read()
+        msg = 'failed to capture message'
         if not editor:
             print('Log:')
             msg = sys.stdin.read()
@@ -353,7 +354,7 @@ class PlogBookLite:
         if not directory:
             directory = self.location
         found = []
-        folders = [dir for dir in os.listdir(directory) if os.path.isdir(os.path.join(directory, dir))]
+        folders = [fdir for fdir in os.listdir(directory) if os.path.isdir(os.path.join(directory, fdir))]
         for folder in folders:
             folder_items = os.listdir(os.path.join(directory, folder))
             if 'theme.css' in folder_items:
@@ -434,6 +435,7 @@ class PlogCategory:
             return u'{}|{}|{}'.format(name, plog_count, date)
         else:
             return u'{};{};{}'.format(self.name, self.plog_count, self.creation_date)
+
 
 def run():
     """
