@@ -25,10 +25,12 @@ IS_3 = True if VERSION == 3 else False
 if IS_3:
     from urllib.request import urlopen
     from urllib.parse import quote
+
     input = input
 else:
     from urllib2 import urlopen
     from urllib import quote
+
     input = raw_input
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -40,7 +42,7 @@ DEFAULT_CSS = """
     body {
         background-color: black;
         font-family: "Monospace", monospace, monospace;
-        color: lawngreen;
+        color: #989898;
     }
 
     table {
@@ -52,8 +54,7 @@ DEFAULT_CSS = """
         background-color: #0b0b0b;
     }
 
-    table#plog_table, td#category_value, th#category_header, td#date_value, th#date_header,
-    td#title_value, th#title_header, td#msg_value, th#msg_header {
+    table, td, th {
         border: 1px solid black;
         padding: 5px;
     }
@@ -65,16 +66,15 @@ DEFAULT_CSS = """
 
     td#msg_value, th#msg_header {
         background-color: #0f0f0f;
+    border-top: 4px solid black;
     }
 
-    th.main_header {
-    background-color: #0f0f0f;
-    border: 1px solid black;
-        padding: 5px;
+    a {
+      text-decoration: none;
+      color: #989898;
     }
-
-    td {
-      padding-left: 10px;
+    a:hover{
+      color: white;
     }
 """
 DEFAULT_HTML_FORMAT = lambda msg, cat, date, title: DEFAULT_HTML.format(msg=msg, cat=cat, date=date, title=title)
@@ -143,7 +143,8 @@ DEFAULT_MAIN = """
 </table>
 """
 DEFAULT_MAIN_ITEM_FORMAT = lambda entry, date, relative_location, title, location: \
-    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_location=relative_location, title=title, location=location)
+    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_location=relative_location, title=title,
+                             location=location)
 DEFAULT_MAIN_ITEM = """
     <tr>
         <td id='title_entry'>
@@ -160,7 +161,7 @@ DEFAULT_MAIN_ITEM = """
         </td>
     </tr>
 """
-#----------------------------------------------------------------------------------------------------------------------
+# ----------------------------------------------------------------------------------------------------------------------
 
 
 class PlogBookLite:
@@ -314,11 +315,15 @@ class PlogBookLite:
                 if 'theme.css' not in filenames:
                     continue
                 for filename in fnmatch.filter(filenames, '*.html'):
+                    if filename == 'main.html':
+                        continue
                     found.append(Plog(location=os.path.join(root, filename),
                                       title=filename))
         else:
             only_files = fnmatch.filter(os.listdir(directory), '*.html')
             for file in only_files:
+                if file == 'main.html':
+                    continue
                 found.append(Plog(location=os.path.join(directory, file)))
 
         if silent:
