@@ -234,34 +234,14 @@ class PlogBookLite:
         if not os.path.exists(os.path.join(save_directory, 'theme.css')) or override_theme:
             if override_theme:
                 print('Overriding theme with newly generated one from DEFAULT_CSS value')
-            with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
-                css_file.write(DEFAULT_CSS)
+            self.write_theme(save_directory)
         # Main
         self.write_main_html(save_directory=save_directory)
 
-    def convert_html(self, html, save_directory, localize_img=False):
-        """
-        Makes html text go through various conversions
-        :param html: html string
-        :param save_directory: directory where html file will be saved
-        :param localize_img: localizes images in the source and store them in location/title/images/
-        :return: updated html string
-        """
-        if localize_img:
-            #Handle file location
-            image_location = os.path.join(save_directory, 'images')
-            if not os.path.exists(image_location):
-                os.makedirs(image_location)
-            # Find tags and replace them with new ones
-            img_tags = re.findall('img.*?src="(.*?)"', html)
-            for src in img_tags:
-                new_src = ''.join(re.findall('(\w+|\.)', src))
-                html.replace(src, new_src)
-                # Downloading and saving
-                with open(os.path.join(image_location, new_src), 'wb') as image_file:
-                    image_source = urlopen(src).read()
-                    image_file.write(image_source)
-        return html
+    @staticmethod
+    def write_theme(save_directory):
+        with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
+                css_file.write(DEFAULT_CSS)
 
     def write_main_html(self, save_directory):
         """
@@ -301,10 +281,37 @@ class PlogBookLite:
         log = DEFAULT_HTML_FORMAT(msg=msg, cat=cat, date=date, title=title)
         return log
 
+    def convert_html(self, html, save_directory, localize_img=False):
+        """
+        Makes html text go through various conversions
+        :param html: html string
+        :param save_directory: directory where html file will be saved
+        :param localize_img: localizes images in the source and store them in location/title/images/
+        :return: updated html string
+        """
+        if localize_img:
+            #Handle file location
+            image_location = os.path.join(save_directory, 'images')
+            if not os.path.exists(image_location):
+                os.makedirs(image_location)
+            # Find tags and replace them with new ones
+            img_tags = re.findall('img.*?src="(.*?)"', html)
+            for src in img_tags:
+                new_src = ''.join(re.findall('(\w+|\.)', src))
+                html.replace(src, new_src)
+                # Downloading and saving
+                with open(os.path.join(image_location, new_src), 'wb') as image_file:
+                    image_source = urlopen(src).read()
+                    image_file.write(image_source)
+        return html
+
     def find_plogs(self, directory=None, recursive=True, pretty_output=False, silent=False):
         """
-        Finds all possible plogs in in the current directory
-        :param recursive (default True): whether to recursively walk through every directory
+        Finds all possible plogs in in the current directory.
+        :param direcoty: where to look for plogs, defaults to self.location.
+        :param recursive (default True): whether to recursively walk through every directory.
+        :param pretty_output: data will be printed in a pretty table.
+        :param silent: no data will be printed.
         """
         #based on http://stackoverflow.com/a/2186565/3737009, upvote the man!
         if not directory:
@@ -337,6 +344,35 @@ class PlogBookLite:
             print(f.__str__(pretty=pretty_output))
         return found
 
+    def find_categories(self, directory=None, pretty_output=False, silent=False):
+        """finds plog categories in a directory
+        :param directory: plogbook directory, defaults to self.location
+        :param pretty_output: data will be printed in a pretty table.
+        :param silent: no data will be printed.
+        """
+        if not directory:
+            directory = self.location
+        found = []
+        folders = [dir for dir in os.listdir(directory) if os.path.isdir(os.path.join(directory, dir))]
+        for folder in folders:
+            folder_items = os.listdir(os.path.join(directory, folder))
+            if 'theme.css' in folder_items:
+                found_plogs = self.find_plogs(directory=os.path.join(directory, folder))
+                found.append(PlogCategory(name=folder,
+                                          location=os.path.join(directory, folder),
+                                          plog_files=found_plogs))
+
+        if silent:
+            return found
+        if pretty_output:
+            print(''.center(65, '-'))
+            print('{}|{}|{}'.format('Name'.center(30, ' '), 'Plog Count'.center(15, ' '),
+                                    'Creation Date'.center(30, ' ')))
+            print(''.center(65, '-'))
+        for f in found:
+            print(f.__str__(pretty=pretty_output))
+        return found
+
 
 class Plog:
     """
@@ -363,12 +399,41 @@ class Plog:
             return u'{};{};{};{}'.format(self.location, self.category, self.title, self.date)
 
     def get_date(self):
+        """finds the date when plog was created"""
         meta = os.stat(self.location)
         date = meta.st_ctime
         date = datetime.fromtimestamp(date)
         date = date.strftime('%x %X')
         return date
 
+
+class PlogCategory:
+    """
+    Storage and management class for plog category.
+    """
+    def __init__(self, name, location, plog_files):
+        self.name = name
+        self.location = location
+        self.plog_files = plog_files
+        self.plog_count = len(self.plog_files)
+        self.creation_date = self.get_date()
+
+    def get_date(self):
+        """finds the date when category was created"""
+        meta = os.stat(self.location)
+        date = meta.st_ctime
+        date = datetime.fromtimestamp(date)
+        date = date.strftime('%x %X')
+        return date
+
+    def __str__(self, pretty=False):
+        if pretty:
+            name = self.name.center(30, ' ')
+            plog_count = str(self.plog_count).center(15, ' ')
+            date = self.creation_date.center(30, ' ')
+            return u'{}|{}|{}'.format(name, plog_count, date)
+        else:
+            return u'{};{};{}'.format(self.name, self.plog_count, self.creation_date)
 
 def run():
     """
@@ -380,8 +445,11 @@ def run():
     parser.add_argument('--localize_images', '-li', help='Localizes images found in @src and store them in plog folder '
                                                          'under images', action='store_true')
     parser.add_argument('--find', help='finds plogs in the curent directory', action='store_true')
+    parser.add_argument('--find_categories', help='finds all categories in a plogbook', action='store_true')
     parser.add_argument('--findr', help='finds plogs in the curent directory recursively', action='store_true')
     parser.add_argument('--override_theme', '-ot', help='override theme with new one', action='store_true')
+    parser.add_argument('--rebuild_category_main', '-rcm', help='rebuild category main with new one')
+    parser.add_argument('--rebuild_theme', '-rt', help='rebuild theme for a category')
     parser.add_argument('--pretty', '-p', help='prettiefies output of --find and --findr', action='store_true')
     parser.add_argument('--location', '-loc', help='location of the plogbook')
     parser.add_argument('--editor', '-e', help='what editor to use to input plog message')
@@ -403,7 +471,14 @@ def run():
         plogbook.find_plogs(recursive=False, pretty_output=args.pretty)
     if args.findr:
         plogbook.find_plogs(recursive=True, pretty_output=args.pretty)
-
+    if args.rebuild_theme:
+        print('rebuilding theme for category: {}'.format(args.rebuild_theme))
+        plogbook.write_theme(os.path.join(plogbook.location, args.rebuild_theme))
+    if args.rebuild_category_main:
+        print('rebuilding category main page  for category: {}'.format(args.rebuild_category_main))
+        plogbook.write_main_html(os.path.join(plogbook.location, args.rebuild_category_main))
+    if args.find_categories:
+        plogbook.find_categories(pretty_output=args.pretty)
 
 if __name__ == '__main__':
     run()
