@@ -7,6 +7,7 @@ import fnmatch
 import argparse
 import tempfile
 import subprocess
+
 from datetime import datetime
 
 # # External package import (things that don't come with python and are optional)
@@ -23,11 +24,11 @@ VERSION = sys.version_info[0]
 IS_3 = True if VERSION == 3 else False
 if IS_3:
     from urllib.request import urlopen
-
+    from urllib.parse import quote
     input = input
 else:
     from urllib2 import urlopen
-
+    from urllib import quote
     input = raw_input
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -50,7 +51,7 @@ DEFAULT_CSS = """
         border-collapse: collapse;
         background-color: #0b0b0b;
     }
-    <!-- this is more flexible even though ugly -->
+
     table#plog_table, td#category_value, th#category_header, td#date_value, th#date_header,
     td#title_value, th#title_header, td#msg_value, th#msg_header {
         border: 1px solid black;
@@ -70,6 +71,10 @@ DEFAULT_CSS = """
     background-color: #0f0f0f;
     border: 1px solid black;
         padding: 5px;
+    }
+
+    td {
+      padding-left: 10px;
     }
 """
 DEFAULT_HTML_FORMAT = lambda msg, cat, date, title: DEFAULT_HTML.format(msg=msg, cat=cat, date=date, title=title)
@@ -113,7 +118,7 @@ DEFAULT_HTML = """
         </tr>
         </table>
 """
-DEFAULT_MAIN_FORMAT = lambda items: DEFAULT_MAIN.format(msg=items)
+DEFAULT_MAIN_FORMAT = lambda items: DEFAULT_MAIN.format(items=items)
 DEFAULT_MAIN = """
 <!--default template for a plog-->
 <head>
@@ -121,37 +126,37 @@ DEFAULT_MAIN = """
 </head>
 <table id='main_table'>
     <tr>
-        <th class='main_header'>
-            Entry #
-        </th>
-        <th class='main_header'>
-            Date
-        </th>
-        <th class='main_header'>
+        <th id='main_header_title' class='main_header'>
             Title
         </th>
-        <th class='main_header'>
+        <th id='main_header_date' class='main_header'>
+            Date
+        </th>
+        <th id='main_header_location' class='main_header'>
             Location
+        </th>
+        <th id='main_header_entry' class='main_header'>
+            Entry #
         </th>
     </tr>
     {items}
 </table>
 """
-DEFAULT_MAIN_ITEM_FORMAT = lambda entry, date, relative_loation, title, location: \
-    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_loation=relative_loation, title=title, location=location)
+DEFAULT_MAIN_ITEM_FORMAT = lambda entry, date, relative_location, title, location: \
+    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_location=relative_location, title=title, location=location)
 DEFAULT_MAIN_ITEM = """
     <tr>
-        <td id='header_entry'>
-            {entry}
+        <td id='title_entry'>
+            <a href='{relative_location}'>{title}</a>
         </td>
         <td id='date_entry'>
             {date}
         </td>
-        <td id='title_entry'>
-            <a href='{relative_location}'>{title}</a>
-        </td>
         <td id='location_entry'>
             {location}
+        </td>
+        <td id='header_entry'>
+            {entry}
         </td>
     </tr>
 """
@@ -166,9 +171,9 @@ class PlogBookLite:
     def __init__(self, location=None):
         self.location = location or os.getcwd()
 
-    def write_plog(self, editor=False, markdown=False, convert_img=False):
+    def write_plog(self, editor=False, markdown=False, convert_img=False, override_theme=False):
         """
-        This method is the main method that is runned to start the process of recording the plog
+        This method is the main method that is being run to start the process of recording the plog
         """
         # Data Input and formatting
         date = datetime.now().strftime('%x-%X')
@@ -220,12 +225,18 @@ class PlogBookLite:
                                   title=title,
                                   date=date)
 
-        # Saving to disk
+        ## Saving to disk
+        # Log
         with open(file_name, 'w') as html_file:
             html_file.write(plog)
-        if not os.path.exists(os.path.join(save_directory, 'theme.css')):
+        # Theme
+        if not os.path.exists(os.path.join(save_directory, 'theme.css')) or override_theme:
+            if override_theme:
+                print('Overriding theme with newly generated one from DEFAULT_CSS value')
             with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
                 css_file.write(DEFAULT_CSS)
+        # Main
+        self.write_main_html(save_directory=save_directory)
 
     def convert_html(self, html, save_directory, localize_img=False):
         """
@@ -251,6 +262,33 @@ class PlogBookLite:
                     image_file.write(image_source)
         return html
 
+    def write_main_html(self, save_directory):
+        """
+        Generates and writes main.html to provided save_directory
+        :param save_directory: where to save
+        """
+        with open(os.path.join(save_directory, 'main.html'), 'w') as main:
+            main.write(self.make_main_html(directory=save_directory))
+
+    def make_main_html(self, directory=None):
+        """
+        Generates main.html for a category
+        :param directory: where to look for plogs
+        """
+        if not directory:
+            directory = self.location
+        found_plogs = self.find_plogs(directory=directory, silent=True, recursive=False)
+        found_plogs = sorted(found_plogs, key=lambda x: x.date)
+        items = []
+        for index, plog in enumerate(found_plogs):
+            items.append(DEFAULT_MAIN_ITEM_FORMAT(entry=index,
+                                                  date=plog.date,
+                                                  relative_location=quote(plog.title),
+                                                  title=plog.title.replace('.html', ''),
+                                                  location=plog.location))
+        items = '\n'.join(items)
+        completed_main = DEFAULT_MAIN_FORMAT(items=items)
+        return completed_main
 
     @staticmethod
     def make_log_html(msg, cat, title, date):
@@ -262,25 +300,29 @@ class PlogBookLite:
         log = DEFAULT_HTML_FORMAT(msg=msg, cat=cat, date=date, title=title)
         return log
 
-    def find_plogs(self, recursive=True, pretty_output=False):
+    def find_plogs(self, directory=None, recursive=True, pretty_output=False, silent=False):
         """
         Finds all possible plogs in in the current directory
         :param recursive (default True): whether to recursively walk through every directory
         """
         #based on http://stackoverflow.com/a/2186565/3737009, upvote the man!
+        if not directory:
+            directory = self.location
         found = []
         if recursive:
-            for root, dirnames, filenames in os.walk(self.location):
+            for root, dirnames, filenames in os.walk(directory):
                 if 'theme.css' not in filenames:
                     continue
                 for filename in fnmatch.filter(filenames, '*.html'):
                     found.append(Plog(location=os.path.join(root, filename),
                                       title=filename))
         else:
-            only_files = fnmatch.filter(os.listdir(self.location), '*.html')
+            only_files = fnmatch.filter(os.listdir(directory), '*.html')
             for file in only_files:
-                found.append(Plog(location=os.path.join(self.location, file)))
+                found.append(Plog(location=os.path.join(directory, file)))
 
+        if silent:
+            return found
         if pretty_output:
             print(''.center(145, '-'))
             print('{}|{}|{}|{}'.format('Location'.ljust(80, ' '), 'Category'.center(20, ' '), 'Title'.center(20, ' '),
@@ -288,6 +330,7 @@ class PlogBookLite:
             print(''.center(145, '-'))
         for f in found:
             print(f.__str__(pretty=pretty_output))
+        return found
 
 
 class Plog:
@@ -333,6 +376,7 @@ def run():
                                                          'under images', action='store_true')
     parser.add_argument('--find', help='finds plogs in the curent directory', action='store_true')
     parser.add_argument('--findr', help='finds plogs in the curent directory recursively', action='store_true')
+    parser.add_argument('--override_theme', '-ot', help='override theme with new one', action='store_true')
     parser.add_argument('--pretty', '-p', help='prettiefies output of --find and --findr', action='store_true')
     parser.add_argument('--location', '-loc', help='location of the plogbook')
     parser.add_argument('--editor', '-e', help='what editor to use to input plog message')
@@ -345,7 +389,10 @@ def run():
                 print('You need to install package "markdown2" for markdown conversion support, '
                       'try: sudo pip install markdown2\nNo conversion will be made!')
                 args.markdown = False
-        plogbook.write_plog(editor=args.editor, markdown=args.markdown, convert_img=args.localize_images)
+        plogbook.write_plog(editor=args.editor,
+                            markdown=args.markdown,
+                            convert_img=args.localize_images,
+                            override_theme=args.override_theme)
 
     if args.find:
         plogbook.find_plogs(recursive=False, pretty_output=args.pretty)
@@ -355,6 +402,13 @@ def run():
 
 if __name__ == '__main__':
     run()
+    # pb = PlogBookLite()
+    # with open('testing_main.html', 'w') as main:
+    #     main.write(pb.make_main_html(directory='/home/reb/projects/plogbook/testing_main/'))
+    # plogs = pb.find_plogs()
+    # print(plogs)
+    # plogs = sorted(plogs, key=lambda x: x.date)
+    # print([el.date for el in plogs])
     # pb = PlogBookLite()
     #
     #
