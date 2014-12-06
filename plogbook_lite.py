@@ -170,11 +170,19 @@ class PlogBookLite:
     """
 
     def __init__(self, location=None):
+        """
+        :param location: location of the plogbook, if not provided current working directory will be taken
+        """
         self.location = location or os.getcwd()
 
-    def write_plog(self, editor=False, markdown=False, convert_img=False, override_theme=False):
+    def write_plog(self, editor=None, markdown=False, convert_img=False, override_theme=False):
         """
         This method is the main method that is being run to start the process of recording the plog
+        :param editor: whether to take 'message' part of the input via editor, otherwise input from shell will be taken
+        :param markdown: whether the 'message' aprt of the input is markdown and requires conversion, this requires
+        markdown2 external package
+        :param convert_img: Whether to localize images found in 'img' tags, they will be saved over category/images/
+        :param override_theme: Whether to override theme with a new one.
         """
         # Data Input and formatting
         date = datetime.now().strftime('%x-%X')
@@ -183,7 +191,7 @@ class PlogBookLite:
         print(''.center(80, '-'))
         category = input('Category: ')
         save_directory = os.path.join(self.location, category)
-        if not os.path.exists(save_directory):
+        if not os.path.exists(save_directory):  # If category doesn't exist, make it
             os.makedirs(save_directory)
         title = input('Title: ')
         file_name = os.path.join(save_directory, title + '.html')
@@ -241,13 +249,15 @@ class PlogBookLite:
 
     @staticmethod
     def write_theme(save_directory):
+        """
+        Generates and writes theme.css to save_directory
+        """
         with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
                 css_file.write(DEFAULT_CSS)
 
     def write_main_html(self, save_directory):
         """
-        Generates and writes main.html to provided save_directory
-        :param save_directory: where to save
+        Generates and writes main.html to save_directory
         """
         with open(os.path.join(save_directory, 'main.html'), 'w') as main:
             main.write(self.make_main_html(directory=save_directory))
@@ -255,7 +265,7 @@ class PlogBookLite:
     def make_main_html(self, directory=None):
         """
         Generates main.html for a category
-        :param directory: where to look for plogs
+        :param directory: where to look for plogs if None will look in self.location
         """
         if not directory:
             directory = self.location
@@ -282,7 +292,8 @@ class PlogBookLite:
         log = DEFAULT_HTML_FORMAT(msg=msg, cat=cat, date=date, title=title)
         return log
 
-    def convert_html(self, html, save_directory, localize_img=False):
+    @staticmethod
+    def convert_html(html, save_directory, localize_img=False):
         """
         Makes html text go through various conversions
         :param html: html string
@@ -309,7 +320,7 @@ class PlogBookLite:
     def find_plogs(self, directory=None, recursive=True, pretty_output=False, silent=False):
         """
         Finds all possible plogs in in the current directory.
-        :param direcoty: where to look for plogs, defaults to self.location.
+        :param directory: where to look for plogs, defaults to self.location.
         :param recursive (default True): whether to recursively walk through every directory.
         :param pretty_output: data will be printed in a pretty table.
         :param silent: no data will be printed.
@@ -377,10 +388,16 @@ class PlogBookLite:
 
 class Plog:
     """
-    Storage and management class for a log item.
+    Storage and management class for a plog item.
+    plog - is an .html file that is a table and contains title, date, category and log message
     """
 
     def __init__(self, location, category=None, title=None):
+        """
+        :param location: location of the plog on the hard-drive
+        :param category: plog category, if not provided will be extracted from location
+        :param title: name of the plog file
+        """
         self.location = location
         self.title = title or os.path.split(self.location)[-1]
         self.category = category or os.path.split(os.path.split(self.location)[0])[-1]
@@ -412,10 +429,16 @@ class PlogCategory:
     """
     Storage and management class for plog category.
     """
-    def __init__(self, name, location, plog_files):
+    def __init__(self, name, location, plog_files=None):
+        """
+        :param name: category name.
+        :param location: location of the category on the hard-drive.
+        :param plog_files: list of plog_file the category contains. If None will find plogs itself in "location".
+        :return:
+        """
         self.name = name
         self.location = location
-        self.plog_files = plog_files
+        self.plog_files = plog_files or PlogBookLite.find_plogs(location)
         self.plog_count = len(self.plog_files)
         self.creation_date = self.get_date()
 
@@ -437,9 +460,9 @@ class PlogCategory:
             return u'{};{};{}'.format(self.name, self.plog_count, self.creation_date)
 
 
-def run():
+def run_argparse():
     """
-    Main running function which executes the whole sequence with arguments.
+    Main running function which executes the whole sequence with arguments by using 'argparse' module.
     """
     parser = argparse.ArgumentParser(description='Personal Log Book')
     parser.add_argument('--write', '-w', help='[default] write a plog', action='store_true')
@@ -483,16 +506,4 @@ def run():
         plogbook.find_categories(pretty_output=args.pretty)
 
 if __name__ == '__main__':
-    run()
-    # pb = PlogBookLite()
-    # with open('testing_main.html', 'w') as main:
-    #     main.write(pb.make_main_html(directory='/home/reb/projects/plogbook/testing_main/'))
-    # plogs = pb.find_plogs()
-    # print(plogs)
-    # plogs = sorted(plogs, key=lambda x: x.date)
-    # print([el.date for el in plogs])
-    # pb = PlogBookLite()
-    #
-    #
-    # # pb.write_plog()
-    # pb.find_plogs(recursive=True)
+    run_argparse()
