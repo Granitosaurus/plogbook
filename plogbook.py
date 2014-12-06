@@ -12,6 +12,8 @@ from datetime import datetime
 
 # # External package import (things that don't come with python and are optional)
 # Markdown2 is for markdown to html conversion
+import webbrowser
+
 try:
     import markdown2
 except ImportError:
@@ -36,6 +38,7 @@ else:
 # ---------------------------------------------------------------------------------------------------------------------
 # EDIT these to change css and html.
 # Note if you change DEFAULT_HTML be sure to check the DEFAULT_FORMAT lambda function which fills up the plog
+# You might need to adjust <...>_FORMAT constants if you decide to change html or css.
 # ---------------------------------------------------------------------------------------------------------------------
 DEFAULT_CSS = """
 /*Default css for plogbook*/
@@ -118,6 +121,48 @@ DEFAULT_HTML = """
         </tr>
         </table>
 """
+DEFAULT_CAT_FORMAT = lambda items: DEFAULT_CAT.format(items=items)
+DEFAULT_CAT = """
+<!--default template for a plog-->
+<head>
+    <link rel="stylesheet" type="text/css" href="theme.css">
+</head>
+<table id='cat_table'>
+    <tr>
+        <th id='cat_header_title' class='cat_header'>
+            Title
+        </th>
+        <th id='cat_header_date' class='cat_header'>
+            Date
+        </th>
+        <th id='cat_header_location' class='cat_header'>
+            Location
+        </th>
+        <th id='cat_header_entry' class='cat_header'>
+            ID#
+        </th>
+    </tr>
+    {items}
+</table>
+"""
+DEFAULT_CAT_ITEM_FORMAT = lambda cat_id, date, relative_location, title, location: DEFAULT_CAT_ITEM.format(
+    cat_id=cat_id, date=date, relative_location=relative_location, title=title, location=location)
+DEFAULT_CAT_ITEM = """
+    <tr>
+        <td id='cat_entry_title'>
+            <a href='{relative_location}'>{title}</a>
+        </td>
+        <td id='cat_entry_date'>
+            {date}
+        </td>
+        <td id='cat_entry_location'>
+            {location}
+        </td>
+        <td id='cat_entry_id'>
+            {cat_id}
+        </td>
+    </tr>
+"""
 DEFAULT_MAIN_FORMAT = lambda items: DEFAULT_MAIN.format(items=items)
 DEFAULT_MAIN = """
 <!--default template for a plog-->
@@ -127,7 +172,10 @@ DEFAULT_MAIN = """
 <table id='main_table'>
     <tr>
         <th id='main_header_title' class='main_header'>
-            Title
+            Name
+        </th>
+        <th id='main_header_count' class='main_header'>
+            Plog count
         </th>
         <th id='main_header_date' class='main_header'>
             Date
@@ -136,28 +184,30 @@ DEFAULT_MAIN = """
             Location
         </th>
         <th id='main_header_entry' class='main_header'>
-            Entry #
+            ID#
         </th>
     </tr>
     {items}
 </table>
 """
-DEFAULT_MAIN_ITEM_FORMAT = lambda entry, date, relative_location, title, location: \
-    DEFAULT_MAIN_ITEM.format(entry=entry, date=date, relative_location=relative_location, title=title,
-                             location=location)
+DEFAULT_MAIN_ITEM_FORMAT = lambda relative_location, name, count, date, location, main_id: DEFAULT_MAIN_ITEM.format(
+    relative_location=relative_location, name=name, count=count, date=date, location=location, main_id=main_id)
 DEFAULT_MAIN_ITEM = """
     <tr>
-        <td id='title_entry'>
-            <a href='{relative_location}'>{title}</a>
+        <td id='main_entry_title'>
+            <a href={relative_location}>{name}</a>
         </td>
-        <td id='date_entry'>
+        <td id='main_entry_date'>
+            {count}
+        </td>
+        <td id='main_entry_date'>
             {date}
         </td>
-        <td id='location_entry'>
+        <td id='main_entry_location'>
             {location}
         </td>
-        <td id='header_entry'>
-            {entry}
+        <td id='main_entry_id'>
+            {main_id}
         </td>
     </tr>
 """
@@ -205,7 +255,7 @@ class PlogBook:
             msg = sys.stdin.read()
         else:
             with tempfile.NamedTemporaryFile(mode='w+t') as temp_file:
-                print('Log Input will be taken from editor: {}'.format(editor))
+                print('<Log Input will be taken from editor: {}>'.format(editor))
                 subprocess.call([editor, temp_file.name])
                 while True:
                     with open(temp_file.name) as f:
@@ -213,6 +263,7 @@ class PlogBook:
                         if contents:
                             msg = contents
                             break
+                print(msg)
 
         # If markdown convert to html
         print(''.center(80, '-'))
@@ -244,8 +295,15 @@ class PlogBook:
             if override_theme:
                 print('Overriding theme with newly generated one from DEFAULT_CSS value')
             self.write_theme(save_directory)
-        # Main
-        self.write_main_html(save_directory=save_directory)
+        # Cat Main
+        self.write_cat_html(save_directory=save_directory)
+        # Plogbook Main
+        self.write_main_html(save_directory=self.location)
+        # Theme for plogbook main
+        if not os.path.exists(os.path.join(self.location, 'theme.css')) or override_theme:
+            if override_theme:
+                print('Overriding theme with newly generated one from DEFAULT_CSS value')
+            self.write_theme(self.location)
 
     @staticmethod
     def write_theme(save_directory):
@@ -255,14 +313,42 @@ class PlogBook:
         with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
             css_file.write(DEFAULT_CSS)
 
-    def write_main_html(self, save_directory):
+    def write_cat_html(self, save_directory):
         """
         Generates and writes main.html to save_directory
+        """
+        with open(os.path.join(save_directory, 'main.html'), 'w') as main:
+            main.write(self.make_cat_html(directory=save_directory))
+
+    def write_main_html(self, save_directory):
+        """
+        Generates and writes landing main.html for the whole plogbook to save_directory
         """
         with open(os.path.join(save_directory, 'main.html'), 'w') as main:
             main.write(self.make_main_html(directory=save_directory))
 
     def make_main_html(self, directory=None):
+        """
+        Generates main.html for the plogbook.
+        """
+        if not directory:
+            directory = self.location
+        categories = self.find_categories(directory=directory, silent=True)
+        categories = sorted(categories, key=lambda x: x.plog_count, reverse=True)
+        items = []
+        for index, cat in enumerate(categories):
+            plog_count = cat.plog_count
+            items.append(DEFAULT_MAIN_ITEM_FORMAT(relative_location=quote(os.path.join(cat.name, 'main.html')),
+                                                  name=cat.name,
+                                                  count=plog_count,
+                                                  date=cat.creation_date,
+                                                  location=cat.location,
+                                                  main_id=index + 1))
+        items = '\n'.join(items)
+        completed_main = DEFAULT_MAIN_FORMAT(items=items)
+        return completed_main
+
+    def make_cat_html(self, directory=None):
         """
         Generates main.html for a category
         :param directory: where to look for plogs if None will look in self.location
@@ -270,16 +356,16 @@ class PlogBook:
         if not directory:
             directory = self.location
         found_plogs = self.find_plogs(directory=directory, silent=True, recursive=False)
-        found_plogs = sorted(found_plogs, key=lambda x: x.date)
+        found_plogs = sorted(found_plogs, key=lambda x: x.date, reverse=True)
         items = []
         for index, plog in enumerate(found_plogs):
-            items.append(DEFAULT_MAIN_ITEM_FORMAT(entry=index,
-                                                  date=plog.date,
-                                                  relative_location=quote(plog.title),
-                                                  title=plog.title.replace('.html', ''),
-                                                  location=plog.location))
+            items.append(DEFAULT_CAT_ITEM_FORMAT(cat_id=index + 1,
+                                                 date=plog.date,
+                                                 relative_location=quote(plog.title),
+                                                 title=plog.title.replace('.html', ''),
+                                                 location=plog.location))
         items = '\n'.join(items)
-        completed_main = DEFAULT_MAIN_FORMAT(items=items)
+        completed_main = DEFAULT_CAT_FORMAT(items=items)
         return completed_main
 
     @staticmethod
@@ -369,7 +455,7 @@ class PlogBook:
         for folder in folders:
             folder_items = os.listdir(os.path.join(directory, folder))
             if 'theme.css' in folder_items:
-                found_plogs = self.find_plogs(directory=os.path.join(directory, folder))
+                found_plogs = self.find_plogs(directory=os.path.join(directory, folder), silent=True)
                 found.append(PlogCategory(name=folder,
                                           location=os.path.join(directory, folder),
                                           plog_files=found_plogs))
@@ -467,6 +553,7 @@ def run_argparse():
     """
     parser = argparse.ArgumentParser(description='Personal Log Book')
     parser.add_argument('--write', '-w', help='[default] write a plog', action='store_true')
+    parser.add_argument('--open', '-o', help='[default] write a plog', action='store_true')
     parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
     parser.add_argument('--localize_images', '-li', help='Localizes images found in @src and store them in plog folder '
                                                          'under images', action='store_true')
@@ -482,7 +569,9 @@ def run_argparse():
     args = parser.parse_args()
 
     plogbook = PlogBook(location=args.location)
-    if not len(sys.argv) > 1 or args.write:
+    if not len(sys.argv) > 1 or args.open:
+        webbrowser.open(os.path.join(args.location or '', 'main.html'))
+    if args.write or args.editor:
         if args.markdown:
             if not MARKDOWN:
                 print('You need to install package "markdown2" for markdown conversion support, '
@@ -502,10 +591,13 @@ def run_argparse():
         plogbook.write_theme(os.path.join(plogbook.location, args.rebuild_theme))
     if args.rebuild_category_main:
         print('rebuilding category main page  for category: {}'.format(args.rebuild_category_main))
-        plogbook.write_main_html(os.path.join(plogbook.location, args.rebuild_category_main))
+        plogbook.write_cat_html(os.path.join(plogbook.location, args.rebuild_category_main))
     if args.find_categories:
         plogbook.find_categories(pretty_output=args.pretty)
 
 
 if __name__ == '__main__':
     run_argparse()
+    # pl = PlogBook()
+    # with open('testing_plogbookmain.html', 'w') as main:
+    #     main.write(pl.make_main_html())
