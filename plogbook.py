@@ -80,8 +80,8 @@ DEFAULT_CSS = """
       color: white;
     }
 """
-DEFAULT_HTML_FORMAT = lambda msg, cat, date, title: DEFAULT_HTML.format(msg=msg, cat=cat, date=date, title=title)
-DEFAULT_HTML = """
+DEFAULT_PLOG_FORMAT = lambda msg, cat, date, title, template: template.format(msg=msg, cat=cat, date=date, title=title)
+DEFAULT_PLOG = """
 <!--default template for a plog-->
         <head>
         <link rel="stylesheet" type="text/css" href="theme.css">
@@ -121,7 +121,7 @@ DEFAULT_HTML = """
         </tr>
         </table>
 """
-DEFAULT_CAT_FORMAT = lambda items: DEFAULT_CAT.format(items=items)
+DEFAULT_CAT_FORMAT = lambda template, items: template.format(items=items)
 DEFAULT_CAT = """
 <!--default template for a plog-->
 <head>
@@ -145,7 +145,7 @@ DEFAULT_CAT = """
     {items}
 </table>
 """
-DEFAULT_CAT_ITEM_FORMAT = lambda cat_id, date, relative_location, title, location: DEFAULT_CAT_ITEM.format(
+DEFAULT_CAT_ITEM_FORMAT = lambda cat_id, date, relative_location, title, location, template: template.format(
     cat_id=cat_id, date=date, relative_location=relative_location, title=title, location=location)
 DEFAULT_CAT_ITEM = """
     <tr>
@@ -163,7 +163,7 @@ DEFAULT_CAT_ITEM = """
         </td>
     </tr>
 """
-DEFAULT_MAIN_FORMAT = lambda items: DEFAULT_MAIN.format(items=items)
+DEFAULT_MAIN_FORMAT = lambda template, items: template.format(items=items)
 DEFAULT_MAIN = """
 <!--default template for a plog-->
 <head>
@@ -190,7 +190,7 @@ DEFAULT_MAIN = """
     {items}
 </table>
 """
-DEFAULT_MAIN_ITEM_FORMAT = lambda relative_location, name, count, date, location, main_id: DEFAULT_MAIN_ITEM.format(
+DEFAULT_MAIN_ITEM_FORMAT = lambda relative_location, name, count, date, location, main_id, template: template.format(
     relative_location=relative_location, name=name, count=count, date=date, location=location, main_id=main_id)
 DEFAULT_MAIN_ITEM = """
     <tr>
@@ -218,12 +218,20 @@ class PlogBook:
     """
     This is main class for plogbook log book
     """
+    templates = {'theme.css': DEFAULT_CSS, 'plog.html': DEFAULT_PLOG, 'category.html': DEFAULT_CAT,
+                 'category_item.html': DEFAULT_CAT_ITEM, 'main.html': DEFAULT_MAIN, 'main_item.html': DEFAULT_MAIN_ITEM}
 
     def __init__(self, location=None):
         """
         :param location: location of the plogbook, if not provided current working directory will be taken
         """
         self.location = location or os.getcwd()
+        self.template_theme = self.read_teamplate('theme.css') or DEFAULT_CSS
+        self.template_plog = self.read_teamplate('plog.html') or DEFAULT_PLOG
+        self.template_cat = self.read_teamplate('category.html') or DEFAULT_CAT
+        self.template_cat_item = self.read_teamplate('category_item.html') or DEFAULT_CAT_ITEM
+        self.template_main = self.read_teamplate('main.html') or DEFAULT_MAIN
+        self.template_main_item = self.read_teamplate('main_item.html') or DEFAULT_MAIN_ITEM
 
     def write_plog(self, editor=None, markdown=False, convert_img=False, override_theme=False):
         """
@@ -247,7 +255,7 @@ class PlogBook:
         file_name = os.path.join(save_directory, title + '.html')
         print(''.center(80, '-'))
 
-        ## message input
+        # # message input
         # For message input use editor if editor is true otherwise use stdin.read()
         msg = 'failed to capture message'
         if not editor:
@@ -293,7 +301,7 @@ class PlogBook:
         # Theme
         if not os.path.exists(os.path.join(save_directory, 'theme.css')) or override_theme:
             if override_theme:
-                print('Overriding theme with newly generated one from DEFAULT_CSS value')
+                print('Overriding theme with newly generated one')
             self.write_theme(save_directory)
         # Cat Main
         self.write_cat_html(save_directory=save_directory)
@@ -302,16 +310,62 @@ class PlogBook:
         # Theme for plogbook main
         if not os.path.exists(os.path.join(self.location, 'theme.css')) or override_theme:
             if override_theme:
-                print('Overriding theme with newly generated one from DEFAULT_CSS value')
+                print('Overriding theme with newly generated one')
             self.write_theme(self.location)
 
-    @staticmethod
-    def write_theme(save_directory):
+    def read_teamplate(self, template):
+        if template not in self.templates.keys():
+            print('Invalid files argument "{}" for template writing,'
+                  ' must be one of:\n{}'.format(template, ', '.join(self.templates.keys())))
+            return None
+        template_path = os.path.join(self.location, 'templates', template)
+
+        if not os.path.exists(template_path):
+            return None
+
+        with open(template_path, 'r') as of:
+            return of.read()
+
+    def write_templates(self, save_directory=None, files=None, override=False):
+        """
+        Writes styles directory with default files if they are missing
+        :param save_directory: where styles folder will be created
+        :param override: Whether to override even if style already exist
+        :param files: list of which files to override, from the following: theme, plog,category, category_item, main_page,
+        main_page_item. None will write ALL.
+        """
+        if not save_directory:
+            save_directory = self.location
+        if not files:
+            files = self.templates.keys()
+
+        # Check template directory
+        template_dir = os.path.join(save_directory, 'templates')
+        if not os.path.exists(template_dir):
+            os.makedirs(template_dir)
+
+        # Check for invalid files
+        for index, file in enumerate(files):
+            if file not in self.templates.keys():
+                print('Invalid files argument "{}" for template writing,'
+                      ' must be one of:\n{}'.format(file, ', '.join(self.templates.keys())))
+                del files[index]
+
+        for file in files:
+            file_path = os.path.join(template_dir, file)
+            if not os.path.exists(file_path) or override:
+                print('created:', file_path)
+                with open(file_path, mode='w') as of:
+                    of.write(self.templates[file])
+
+    def write_theme(self, save_directory=None):
         """
         Generates and writes theme.css to save_directory
         """
+        if not save_directory:
+            save_directory = self.location
         with open(os.path.join(save_directory, 'theme.css'), 'w') as css_file:
-            css_file.write(DEFAULT_CSS)
+            css_file.write(self.template_theme)
 
     def write_cat_html(self, save_directory):
         """
@@ -320,10 +374,12 @@ class PlogBook:
         with open(os.path.join(save_directory, 'main.html'), 'w') as main:
             main.write(self.make_cat_html(directory=save_directory))
 
-    def write_main_html(self, save_directory):
+    def write_main_html(self, save_directory=None):
         """
         Generates and writes landing main.html for the whole plogbook to save_directory
         """
+        if not save_directory:
+            save_directory = self.location
         with open(os.path.join(save_directory, 'main.html'), 'w') as main:
             main.write(self.make_main_html(directory=save_directory))
 
@@ -338,14 +394,15 @@ class PlogBook:
         items = []
         for index, cat in enumerate(categories):
             plog_count = cat.plog_count
-            items.append(DEFAULT_MAIN_ITEM_FORMAT(relative_location=quote(os.path.join(cat.name, 'main.html')),
+            items.append(DEFAULT_MAIN_ITEM_FORMAT(template=self.template_main_item,
+                                                  relative_location=quote(os.path.join(cat.name, 'main.html')),
                                                   name=cat.name,
                                                   count=plog_count,
                                                   date=cat.creation_date,
                                                   location=cat.location,
                                                   main_id=index + 1))
         items = '\n'.join(items)
-        completed_main = DEFAULT_MAIN_FORMAT(items=items)
+        completed_main = DEFAULT_MAIN_FORMAT(template=self.template_main,items=items)
         return completed_main
 
     def make_cat_html(self, directory=None):
@@ -359,23 +416,23 @@ class PlogBook:
         found_plogs = sorted(found_plogs, key=lambda x: x.date, reverse=True)
         items = []
         for index, plog in enumerate(found_plogs):
-            items.append(DEFAULT_CAT_ITEM_FORMAT(cat_id=index + 1,
+            items.append(DEFAULT_CAT_ITEM_FORMAT(template=self.template_cat_item,
+                                                 cat_id=index + 1,
                                                  date=plog.date,
                                                  relative_location=quote(plog.title),
                                                  title=plog.title.replace('.html', ''),
                                                  location=plog.location))
         items = '\n'.join(items)
-        completed_main = DEFAULT_CAT_FORMAT(items=items)
+        completed_main = DEFAULT_CAT_FORMAT(template=self.template_cat, items=items)
         return completed_main
 
-    @staticmethod
-    def make_log_html(msg, cat, title, date):
+    def make_log_html(self, msg, cat, title, date):
         """
         Converts data to html fil.
         Turns all input new lines into paragraphs
         """
         msg = ''.join(['<p>{msg}</p>'.format(msg=msg) for msg in msg.split('\n')])
-        log = DEFAULT_HTML_FORMAT(msg=msg, cat=cat, date=date, title=title)
+        log = DEFAULT_PLOG_FORMAT(template=self.template_plog, msg=msg, cat=cat, date=date, title=title)
         return log
 
     @staticmethod
@@ -388,7 +445,7 @@ class PlogBook:
         :return: updated html string
         """
         if localize_img:
-            #Handle file location
+            # Handle file location
             image_location = os.path.join(save_directory, 'images')
             if not os.path.exists(image_location):
                 os.makedirs(image_location)
@@ -411,7 +468,7 @@ class PlogBook:
         :param pretty_output: data will be printed in a pretty table.
         :param silent: no data will be printed.
         """
-        #based on http://stackoverflow.com/a/2186565/3737009, upvote the man!
+        # based on http://stackoverflow.com/a/2186565/3737009, upvote the man!
         if not directory:
             directory = self.location
         found = []
@@ -454,6 +511,8 @@ class PlogBook:
         folders = [fdir for fdir in os.listdir(directory) if os.path.isdir(os.path.join(directory, fdir))]
         for folder in folders:
             folder_items = os.listdir(os.path.join(directory, folder))
+            if folder == 'templates':
+                continue
             if 'theme.css' in folder_items:
                 found_plogs = self.find_plogs(directory=os.path.join(directory, folder), silent=True)
                 found.append(PlogCategory(name=folder,
@@ -552,23 +611,37 @@ def run_argparse():
     Main running function which executes the whole sequence with arguments by using 'argparse' module.
     """
     parser = argparse.ArgumentParser(description='Personal Log Book')
-    parser.add_argument('--write', '-w', help='[default] write a plog', action='store_true')
-    parser.add_argument('--open', '-o', help='[default] write a plog', action='store_true')
+    parser.add_argument('--open', '-o', help='[default] open the plogbook in your default browser', action='store_true')
+    parser.add_argument('--write', '-w', help='write a plog', action='store_true')
+    parser.add_argument('--build_templates', '-bts',
+                        help='builds templates for easy editing that will be used instead of default values, located '
+                             'in <plogbook>/templates', action='store_true')
+    parser.add_argument('--build_template', '-bt', help='build a specific templates only', nargs='+')
+    parser.add_argument('--override', help='override any files being created, i.e. with --build_templates',
+                        action='store_true')
     parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
-    parser.add_argument('--localize_images', '-li', help='Localizes images found in @src and store them in plog folder '
+    parser.add_argument('--localize_images', '-li', help='Localize images found in @src and store them in plog folder '
                                                          'under images', action='store_true')
     parser.add_argument('--find', help='finds plogs in the curent directory', action='store_true')
     parser.add_argument('--find_categories', help='finds all categories in a plogbook', action='store_true')
     parser.add_argument('--findr', help='finds plogs in the curent directory recursively', action='store_true')
     parser.add_argument('--override_theme', '-ot', help='override theme with new one', action='store_true')
-    parser.add_argument('--rebuild_category_main', '-rcm', help='rebuild category main with new one')
-    parser.add_argument('--rebuild_theme', '-rt', help='rebuild theme for a category')
+    parser.add_argument('--rebuild_category_main', '-rbcm', help='rebuild category main with new one')
+    parser.add_argument('--rebuild_main', '-rbm', help='rebuild category main with new one', action='store_true')
+    parser.add_argument('--rebuild_main_theme', '-rbmt', help='rebuild theme for plogbook', action='store_true')
+    parser.add_argument('--rebuild_cat_theme', '-rbct', help='rebuild theme for a category')
     parser.add_argument('--pretty', '-p', help='prettiefies output of --find and --findr', action='store_true')
     parser.add_argument('--location', '-loc', help='location of the plogbook')
     parser.add_argument('--editor', '-e', help='what editor to use to input plog message')
+
     args = parser.parse_args()
 
     plogbook = PlogBook(location=args.location)
+    if args.build_template:
+        plogbook.write_templates(files=args.build_template, override=args.override)
+    if args.build_templates:
+        print('creating templates that will be used by plogbook, check <plogbook>/templates')
+        plogbook.write_templates(override=args.override)
     if not len(sys.argv) > 1 or args.open:
         webbrowser.open(os.path.join(args.location or '', 'main.html'))
     if args.write or args.editor:
@@ -586,12 +659,18 @@ def run_argparse():
         plogbook.find_plogs(recursive=False, pretty_output=args.pretty)
     if args.findr:
         plogbook.find_plogs(recursive=True, pretty_output=args.pretty)
-    if args.rebuild_theme:
-        print('rebuilding theme for category: {}'.format(args.rebuild_theme))
-        plogbook.write_theme(os.path.join(plogbook.location, args.rebuild_theme))
+    if args.rebuild_cat_theme:
+        print('rebuilding theme for category: {}'.format(args.rebuild_cat_theme))
+        plogbook.write_theme(os.path.join(plogbook.location, args.rebuild_cat_theme))
+    if args.rebuild_main_theme:
+        print('rebuilding theme plogbook, loc: {}'.format(plogbook.location))
+        plogbook.write_theme()
     if args.rebuild_category_main:
         print('rebuilding category main page  for category: {}'.format(args.rebuild_category_main))
         plogbook.write_cat_html(os.path.join(plogbook.location, args.rebuild_category_main))
+    if args.rebuild_main:
+        print('rebuilding plogbook main page')
+        plogbook.write_main_html()
     if args.find_categories:
         plogbook.find_categories(pretty_output=args.pretty)
 
@@ -599,5 +678,6 @@ def run_argparse():
 if __name__ == '__main__':
     run_argparse()
     # pl = PlogBook()
+    # pl.write_templates(os.getcwd(), ['plog.html', 'smog'])
     # with open('testing_plogbookmain.html', 'w') as main:
     #     main.write(pl.make_main_html())
