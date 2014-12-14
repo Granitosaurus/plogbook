@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 from __future__ import print_function
 import os
 import re
@@ -43,22 +43,22 @@ else:
 DEFAULT_CSS = """
 /*Default css for plogbook*/
     body {
-        background-color: black;
-        font-family: "Monospace", monospace, monospace;
-        color: #989898;
+        background-color: #c3c3c3;
+        font-family: "Courier New", courier, monospace;
+        color: #ffffff;
     }
 
     table {
-        width: 60%;
+        width: 70%;
         margin-top: 50px;
         margin-left: 15%;
         margin-right: 15%;
         border-collapse: collapse;
-        background-color: #0b0b0b;
+        background-color: #727c8b;
     }
 
     table, td, th {
-        border: 1px solid black;
+        border: 1px solid #c6c6c6;
         padding: 5px;
     }
 
@@ -68,16 +68,21 @@ DEFAULT_CSS = """
     }
 
     td#msg_value, th#msg_header {
-        background-color: #0f0f0f;
-    border-top: 4px solid black;
+        background-color: #3f3a4b;
+        border-top: 4px solid #cdcdcd;
+    }
+
+    .cat_header, .main_header{
+        background-color: #3f3a4b;
     }
 
     a {
-      text-decoration: none;
-      color: #989898;
+        text-decoration: none;
+        color: white;
     }
     a:hover{
-      color: white;
+        text-decoration: underline;
+        color: white;
     }
 """
 DEFAULT_PLOG_FORMAT = lambda msg, cat, date, title, template: template.format(msg=msg, cat=cat, date=date, title=title)
@@ -637,13 +642,19 @@ def run_argparse():
     args = parser.parse_args()
 
     plogbook = PlogBook(location=args.location)
+    if not len(sys.argv) > 1 or args.open:
+        # If plogbook main.html exists open it else write plog
+        main_path = os.path.join(args.location or '', 'main.html')
+        if os.path.exists(main_path):
+            webbrowser.open(main_path)
+        else:
+            args.write = True
+
     if args.build_template:
         plogbook.write_templates(files=args.build_template, override=args.override)
     if args.build_templates:
         print('creating templates that will be used by plogbook, check <plogbook>/templates')
         plogbook.write_templates(override=args.override)
-    if not len(sys.argv) > 1 or args.open:
-        webbrowser.open(os.path.join(args.location or '', 'main.html'))
     if args.write or args.editor:
         if args.markdown:
             if not MARKDOWN:
