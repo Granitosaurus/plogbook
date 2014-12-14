@@ -642,17 +642,18 @@ def run_argparse():
     args = parser.parse_args()
 
     plogbook = PlogBook(location=args.location)
+    first_run = False
     if not len(sys.argv) > 1 or args.open:
+        first_run = True
         # If plogbook main.html exists open it else write plog
         main_path = os.path.join(args.location or '', 'main.html')
         if os.path.exists(main_path):
             webbrowser.open(main_path)
         else:
-            args.write = True
-            plogbook_name = input('Enter name of new plogbook:')
-            new_location = os.path.join(plogbook.location, plogbook_name)
-            os.makedirs(new_location)
-            plogbook.location = new_location
+            start_new = input("New plogbook will be started in this folder, are you sure?(y/n)")
+            if 'y' in start_new.lower():
+                print("Now to finish up initiating write your first plog!")
+                args.write = True
 
     if args.build_template:
         plogbook.write_templates(files=args.build_template, override=args.override)
