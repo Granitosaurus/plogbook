@@ -649,6 +649,10 @@ def run_argparse():
             webbrowser.open(main_path)
         else:
             args.write = True
+            plogbook_name = input('Enter name of new plogbook:')
+            new_location = os.path.join(plogbook.location, plogbook_name)
+            os.makedirs(new_location)
+            plogbook.location = new_location
 
     if args.build_template:
         plogbook.write_templates(files=args.build_template, override=args.override)
