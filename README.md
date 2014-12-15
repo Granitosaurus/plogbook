@@ -35,3 +35,14 @@ You can rebuild styles but for html not yet, I'm working on this feature.
 Yes, however for markdown to html conversion you need to install [Markdown2](https://github.com/trentm/python-markdown2) package.  See --markdown  
 ###### Can I make plogbook download images from the plogs and store them locally?  
 Yes, see --localize-images  
+
+How does it look?
+===
+Note: any templates and looks can be adjusted, see faq and examples/build_templates example.   
+**Default output.**  
+Main page:  
+![main page](http://wstaw.org/m/2014/12/15/plasma-desktopBE2314.png)
+Category page:  
+![category page for plogbook category](http://wstaw.org/m/2014/12/15/plasma-desktopYv2314.png)
+Plog:  
+![plog from the plogbook category](http://wstaw.org/m/2014/12/15/plasma-desktopew2314.png)
