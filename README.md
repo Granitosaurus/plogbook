@@ -27,7 +27,7 @@ In a way yeah, though diaries are for little girls and logs just sound cool. Mak
 ###### What about security ?  
 plogbook has no real security mechanism at the moment. Security should be kept outside of plogbook for now (i.e. see [for linux] (http://askubuntu.com/questions/104542/is-there-a-way-to-password-protect-individual-folders))
 ###### Can I change the css and html ? Default ones are ugly    
-Yes, you can build out html and css templates by --build_templates. Templates will be created at plogbook/templates directory and will be used to build new plogs. To rebuild old plog files see --rebuild_<..> commands. Feel free to propose different default designs to [issues](https://github.com/Granitas/plogbook/issues) (would be really nice) !   
+Yes, you can build out html and css templates by --build_templates. Templates will be created at plogbook/templates directory and will be used to build new plogs. To rebuild old plog files see --rebuild_<..> commands. Feel free to propose different default designs to [issues](https://github.com/Granitas/plogbook/issues) (would be really nice)   
 ###### Can I rebuild plogs to use new html templates?  
 You can rebuild styles but for html not yet, I'm working on this feature.  
 ###### Writting html sucks, can I write my plogs in markdown?  
