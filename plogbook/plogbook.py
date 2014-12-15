@@ -624,27 +624,30 @@ def run_argparse():
     parser.add_argument('--build_template', '-bt', help='build a specific templates only', nargs='+')
     parser.add_argument('--override', help='override any files being created, i.e. with --build_templates',
                         action='store_true')
-    parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
-    parser.add_argument('--localize_images', '-li', help='Localize images found in @src and store them in plog folder '
-                                                         'under images', action='store_true')
-    parser.add_argument('--find', help='finds plogs in the curent directory', action='store_true')
+    parser.add_argument('--find', help='finds plogs in the current directory', action='store_true')
     parser.add_argument('--find_categories', help='finds all categories in a plogbook', action='store_true')
-    parser.add_argument('--findr', help='finds plogs in the curent directory recursively', action='store_true')
+    parser.add_argument('--findr', help='finds plogs in the current directory recursively', action='store_true')
+    parser.add_argument('--pretty', '-p', help='prettifies output of console output i.e. --find and --findr',
+                        action='store_true')
     parser.add_argument('--override_theme', '-ot', help='override theme with new one', action='store_true')
-    parser.add_argument('--rebuild_category_main', '-rbcm', help='rebuild category main with new one')
-    parser.add_argument('--rebuild_main', '-rbm', help='rebuild category main with new one', action='store_true')
-    parser.add_argument('--rebuild_main_theme', '-rbmt', help='rebuild theme for plogbook', action='store_true')
-    parser.add_argument('--rebuild_cat_theme', '-rbct', help='rebuild theme for a category')
-    parser.add_argument('--pretty', '-p', help='prettiefies output of --find and --findr', action='store_true')
-    parser.add_argument('--location', '-loc', help='location of the plogbook')
-    parser.add_argument('--editor', '-e', help='what editor to use to input plog message')
+
+    parser.add_argument('--rebuild_main', '-rbm', help='rebuild main plogbook page', action='store_true')
+    parser.add_argument('--rebuild_main_theme', '-rbt', help='rebuild main plogbook page theme', action='store_true')
+    parser.add_argument('--rebuild_cat_main', '-rbcm', help='rebuild category main')
+    parser.add_argument('--rebuild_cat_theme', '-rbct', help='rebuild category theme')
+
+    parser.add_argument('--localize_images', '-li', help='Localize images found in @src and store them in plog folder '
+                                                         'under images/', action='store_true')
+
+    parser.add_argument('--location', '-loc', help='location of the plogbook, if not provided defaults to '
+                                                   'current working directory')
+    parser.add_argument('--editor', '-e', help='what editor to use to input plog message, i.e. nano')
+    parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
 
     args = parser.parse_args()
 
     plogbook = PlogBook(location=args.location)
-    first_run = False
     if not len(sys.argv) > 1 or args.open:
-        first_run = True
         # If plogbook main.html exists open it else write plog
         main_path = os.path.join(args.location or '', 'main.html')
         if os.path.exists(main_path):
@@ -693,7 +696,3 @@ def run_argparse():
 
 if __name__ == '__main__':
     run_argparse()
-    # pl = PlogBook()
-    # pl.write_templates(os.getcwd(), ['plog.html', 'smog'])
-    # with open('testing_plogbookmain.html', 'w') as main:
-    #     main.write(pl.make_main_html())
