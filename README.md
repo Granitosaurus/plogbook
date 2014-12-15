@@ -1,13 +1,12 @@
 plogbook
 ========
 
-Console application for personal logging, which turns logs into readable html pages. The logs (called plogs) are located in categories which are part of the plogbook.
+Plogbook is a console application for personal logging. It turns personal logs written in console or favorite text editor into readable html pages. The personal logs(plogs for short) are located in categories which are part of the plogbook.
 
-It's written as a single python file which should run on both python 2 and python 3. Only tested on Linux but should run on Windows and Mac Os as well.
 Execute via: 
->python plogbook.py   
+>python plogbook.py  
 
-and see --help for usage.  
+and see --help for argument usage.  
 For examples see /examples/. For suggestions and bugs please see [issues](https://github.com/Granitas/plogbook/issues)
 
 First time usage
