@@ -1,0 +1,38 @@
+
+<!--default template for a plog-->
+<head>
+    <link rel="stylesheet" type="text/css" href="theme.css">
+</head>
+<table id='main_table'>
+    <tr>
+        <th id='main_header_title' class='main_header'>
+            Name
+        </th>
+        <th id='main_header_date' class='main_header'>
+            Date
+        </th>
+        <th id='main_header_location' class='main_header'>
+            Location
+        </th>
+        <th id='main_header_entry' class='main_header'>
+            ID#
+        </th>
+    </tr>
+    
+    <tr>
+        <td id='main_entry_title'>
+            <a href={relative_location}>{name}</a>
+        </td>
+        <td id='main_entry_date'>
+            {date}
+        </td>
+        <td id='main_entry_location'>
+            {location}
+        </td>
+        <td id='main_entry_id'>
+            {main_id}
+        </td>
+    </tr>
+
+
+</table>
