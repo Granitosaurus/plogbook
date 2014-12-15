@@ -44,4 +44,6 @@ Main page:
 Category page:  
 ![category page for plogbook category](http://wstaw.org/m/2014/12/15/plasma-desktopYv2314.png)
 Plog:  
-![plog from the plogbook category](http://wstaw.org/m/2014/12/15/plasma-desktopew2314.png)
+![plog from the plogbook category](http://wstaw.org/m/2014/12/15/plasma-desktopew2314.png)  
+Writting plog via console:  
+![writting plog](http://wstaw.org/m/2014/12/15/plasma-desktopyy2314.png)  
