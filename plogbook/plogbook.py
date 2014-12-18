@@ -685,8 +685,8 @@ def run_argparse():
         print('rebuilding theme plogbook, loc: {}'.format(plogbook.location))
         plogbook.write_theme()
     if args.rebuild_cat_main:
-        print('rebuilding category main page  for category: {}'.format(args.rebuild_category_main))
-        plogbook.write_cat_html(os.path.join(plogbook.location, args.rebuild_category_main))
+        print('rebuilding category main page  for category: {}'.format(args.rebuild_cat_main))
+        plogbook.write_cat_html(os.path.join(plogbook.location, args.rebuild_cat_main))
     if args.rebuild_main:
         print('rebuilding plogbook main page')
         plogbook.write_main_html()
