@@ -3,7 +3,7 @@ from plogbook import utils
 import unittest
 
 # Here's our "unit tests".
-class PlogTests(unittest.TestCase):
+class UtilsTestsunittest.TestCase):
 
     def test_truncate(self):
         tests = ((['test', 20], 'test'),
