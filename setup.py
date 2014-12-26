@@ -1,0 +1,15 @@
+from distutils.core import setup
+
+
+setup(
+    name='plogbook',
+    version='0.2',
+    packages=['plogbook', 'plogbook.tests'],
+    url='',
+    license='see LICENSE',
+    author='granitas',
+    author_email='bernardas.alisauskas@gmail.com',
+    description='Plogbook is a console application for personal logging. It turns personal logs written in console or '
+                'favorite text editor into readable html pages. The personal logs(plogs for short) are located in '
+                'categories which are part of the plogbook'
+)
