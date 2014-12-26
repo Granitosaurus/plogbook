@@ -1,4 +1,4 @@
-import plogbook
+from plogbook import utils
 
 import unittest
 
@@ -14,7 +14,7 @@ class PlogTests(unittest.TestCase):
                  (['banana', 5], 'ba...'),)
 
         for test in tests:
-            self.failUnlessEqual(plogbook.Plog.truncate(*test[0]), test[1])
+            self.failUnlessEqual(utils.truncate(*test[0]), test[1])
 
 
 def main():
