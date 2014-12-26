@@ -3,7 +3,14 @@ import os
 import sys
 import webbrowser
 
-from book import PlogBook, MARKDOWN
+# # multi-versioning
+VERSION = sys.version_info[0]
+IS_3 = True if VERSION == 3 else False
+if IS_3:
+    input = input
+else:
+    input = raw_input
+from plogbook.book import PlogBook, MARKDOWN
 
 
 def run_argparse():

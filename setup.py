@@ -3,8 +3,8 @@ from distutils.core import setup
 
 setup(
     name='plogbook',
-    version='0.2',
-    packages=['plogbook', 'plogbook.tests'],
+    version='0.21',
+    packages=['plogbook', 'plogbook.tests', 'plogbook.default_styles'],
     url='',
     license='see LICENSE',
     author='granitas',
