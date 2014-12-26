@@ -1,7 +1,7 @@
 from datetime import datetime
 import os
 
-from plogbook import utils
+import utils
 
 
 class Plog:

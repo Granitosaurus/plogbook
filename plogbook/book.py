@@ -13,8 +13,8 @@ from datetime import datetime
 
 # # External package import (things that don't come with python and are optional)
 # Markdown2 is for markdown to html conversion
-from plogbook.plog import Plog
-from plogbook.plogcategory import PlogCategory
+from plog import Plog
+from plogcategory import PlogCategory
 
 
 try:

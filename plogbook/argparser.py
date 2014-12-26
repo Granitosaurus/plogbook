@@ -3,7 +3,7 @@ import os
 import sys
 import webbrowser
 
-from plogbook.book import PlogBook, MARKDOWN
+from book import PlogBook, MARKDOWN
 
 
 def run_argparse():
