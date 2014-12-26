@@ -1,0 +1,43 @@
+/*Default css for plogbook*/
+    body {
+        background-color: #c3c3c3;
+        font-family: "Courier New", courier, monospace;
+        color: #ffffff;
+    }
+
+    table {
+        width: 70%;
+        margin-top: 50px;
+        margin-left: 15%;
+        margin-right: 15%;
+        border-collapse: collapse;
+        background-color: #727c8b;
+    }
+
+    table, td, th {
+        border: 1px solid #c6c6c6;
+        padding: 5px;
+    }
+
+    th {
+        text-align: left;
+        width: 100px;
+    }
+
+    td#msg_value, th#msg_header {
+        background-color: #3f3a4b;
+        border-top: 4px solid #cdcdcd;
+    }
+
+    .cat_header, .main_header{
+        background-color: #3f3a4b;
+    }
+
+    a {
+        text-decoration: none;
+        color: white;
+    }
+    a:hover{
+        text-decoration: underline;
+        color: white;
+    }
