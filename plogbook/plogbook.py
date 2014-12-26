@@ -4,15 +4,20 @@ import os
 import re
 import sys
 import fnmatch
-import argparse
 import tempfile
 import subprocess
 
 from datetime import datetime
 
+# import Plogbook
+
 # # External package import (things that don't come with python and are optional)
 # Markdown2 is for markdown to html conversion
 import webbrowser
+# from .plog import Plog
+from plogbook.plog import Plog
+from plogbook.plogcategory import PlogCategory
+
 
 try:
     import markdown2
@@ -41,7 +46,7 @@ else:
 # You might need to adjust <...>_FORMAT constants if you decide to change html or css.
 # ---------------------------------------------------------------------------------------------------------------------
 DEFAULT_CSS = """
-/*Default css for plogbook*/
+/*Default css for Plogbook*/
     body {
         background-color: #c3c3c3;
         font-family: "Courier New", courier, monospace;
@@ -221,14 +226,14 @@ DEFAULT_MAIN_ITEM = """
 
 class PlogBook:
     """
-    This is main class for plogbook log book
+    This is main class for Plogbook log book
     """
     templates = {'theme.css': DEFAULT_CSS, 'plog.html': DEFAULT_PLOG, 'category.html': DEFAULT_CAT,
                  'category_item.html': DEFAULT_CAT_ITEM, 'main.html': DEFAULT_MAIN, 'main_item.html': DEFAULT_MAIN_ITEM}
 
     def __init__(self, location=None):
         """
-        :param location: location of the plogbook, if not provided current working directory will be taken
+        :param location: location of the Plogbook, if not provided current working directory will be taken
         """
         self.location = location or os.getcwd()
         self.template_theme = self.read_teamplate('theme.css') or DEFAULT_CSS
@@ -312,7 +317,7 @@ class PlogBook:
         self.write_cat_html(save_directory=save_directory)
         # Plogbook Main
         self.write_main_html(save_directory=self.location)
-        # Theme for plogbook main
+        # Theme for Plogbook main
         if not os.path.exists(os.path.join(self.location, 'theme.css')) or override_theme:
             if override_theme:
                 print('Overriding theme with newly generated one')
@@ -330,6 +335,11 @@ class PlogBook:
 
         with open(template_path, 'r') as of:
             return of.read()
+
+    def read_default_template(self, template):
+        template_path = os.path.join(self.__file__, 'templates', template)
+        return template_path
+
 
     def write_templates(self, save_directory=None, files=None, override=False):
         """
@@ -381,7 +391,7 @@ class PlogBook:
 
     def write_main_html(self, save_directory=None):
         """
-        Generates and writes landing main.html for the whole plogbook to save_directory
+        Generates and writes landing main.html for the whole Plogbook to save_directory
         """
         if not save_directory:
             save_directory = self.location
@@ -390,7 +400,7 @@ class PlogBook:
 
     def make_main_html(self, directory=None):
         """
-        Generates main.html for the plogbook.
+        Generates main.html for the Plogbook.
         """
         if not directory:
             directory = self.location
@@ -506,7 +516,7 @@ class PlogBook:
 
     def find_categories(self, directory=None, pretty_output=False, silent=False):
         """finds plog categories in a directory
-        :param directory: plogbook directory, defaults to self.location
+        :param directory: Plogbook directory, defaults to self.location
         :param pretty_output: data will be printed in a pretty table.
         :param silent: no data will be printed.
         """
@@ -536,163 +546,8 @@ class PlogBook:
         return found
 
 
-class Plog:
-    """
-    Storage and management class for a plog item.
-    plog - is an .html file that is a table and contains title, date, category and log message
-    """
-
-    def __init__(self, location, category=None, title=None):
-        """
-        :param location: location of the plog on the hard-drive
-        :param category: plog category, if not provided will be extracted from location
-        :param title: name of the plog file
-        """
-        self.location = location
-        self.title = title or os.path.split(self.location)[-1]
-        self.category = category or os.path.split(os.path.split(self.location)[0])[-1]
-        self.date = self.get_date()
-
-    def __str__(self, pretty=False):
-        if pretty:
-            location = '...' + self.location.ljust(80, ' ')[-77::] \
-                if len(self.location) > 80 else self.location.ljust(80, ' ')
-            category = self.category.center(20, ' ')[:17] + '...' \
-                if len(self.category) > 20 else self.category.center(20, ' ')
-            title = self.title.center(20, ' ')[:17] + '...' \
-                if len(self.title) > 20 else self.title.center(20, ' ')
-            date = self.date.center(20, ' ')
-            return u'{}|{}|{}|{}'.format(location, category, title, date)
-        else:
-            return u'{};{};{};{}'.format(self.location, self.category, self.title, self.date)
-
-    def get_date(self):
-        """finds the date when plog was created"""
-        meta = os.stat(self.location)
-        date = meta.st_ctime
-        date = datetime.fromtimestamp(date)
-        date = date.strftime('%x %X')
-        return date
-
-
-class PlogCategory:
-    """
-    Storage and management class for plog category.
-    """
-
-    def __init__(self, name, location, plog_files=None):
-        """
-        :param name: category name.
-        :param location: location of the category on the hard-drive.
-        :param plog_files: list of plog_file the category contains. If None will find plogs itself in "location".
-        :return:
-        """
-        self.name = name
-        self.location = location
-        self.plog_files = plog_files or PlogBook.find_plogs(location)
-        self.plog_count = len(self.plog_files)
-        self.creation_date = self.get_date()
-
-    def get_date(self):
-        """finds the date when category was created"""
-        meta = os.stat(self.location)
-        date = meta.st_ctime
-        date = datetime.fromtimestamp(date)
-        date = date.strftime('%x %X')
-        return date
-
-    def __str__(self, pretty=False):
-        if pretty:
-            name = self.name.center(30, ' ')
-            plog_count = str(self.plog_count).center(15, ' ')
-            date = self.creation_date.center(30, ' ')
-            return u'{}|{}|{}'.format(name, plog_count, date)
-        else:
-            return u'{};{};{}'.format(self.name, self.plog_count, self.creation_date)
-
-
-def run_argparse():
-    """
-    Main running function which executes the whole sequence with arguments by using 'argparse' module.
-    """
-    parser = argparse.ArgumentParser(description='Personal Log Book')
-    parser.add_argument('--open', '-o', help='[default] open the plogbook in your default browser', action='store_true')
-    parser.add_argument('--write', '-w', help='write a plog', action='store_true')
-    parser.add_argument('--build_templates', '-bts',
-                        help='builds templates for easy editing that will be used instead of default values, located '
-                             'in <plogbook>/templates', action='store_true')
-    parser.add_argument('--build_template', '-bt', help='build a specific templates only', nargs='+')
-    parser.add_argument('--override', help='override any files being created, i.e. with --build_templates',
-                        action='store_true')
-    parser.add_argument('--find', help='finds plogs in the current directory', action='store_true')
-    parser.add_argument('--find_categories', help='finds all categories in a plogbook', action='store_true')
-    parser.add_argument('--findr', help='finds plogs in the current directory recursively', action='store_true')
-    parser.add_argument('--pretty', '-p', help='prettifies output of console output i.e. --find and --findr',
-                        action='store_true')
-    parser.add_argument('--override_theme', '-ot', help='override theme with new one', action='store_true')
-
-    parser.add_argument('--rebuild_main', '-rbm', help='rebuild main plogbook page', action='store_true')
-    parser.add_argument('--rebuild_main_theme', '-rbt', help='rebuild main plogbook page theme', action='store_true')
-    parser.add_argument('--rebuild_cat_main', '-rbcm', help='rebuild category main')
-    parser.add_argument('--rebuild_cat_theme', '-rbct', help='rebuild category theme')
-
-    parser.add_argument('--localize_images', '-li', help='Localize images found in @src and store them in plog folder '
-                                                         'under images/', action='store_true')
-
-    parser.add_argument('--location', '-loc', help='location of the plogbook, if not provided defaults to '
-                                                   'current working directory')
-    parser.add_argument('--editor', '-e', help='what editor to use to input plog message, i.e. nano')
-    parser.add_argument('--markdown', '-md', help='markdown to html conversion for plog message', action='store_true')
-
-    args = parser.parse_args()
-
-    plogbook = PlogBook(location=args.location)
-    if not len(sys.argv) > 1 or args.open:
-        # If plogbook main.html exists open it else write plog
-        main_path = os.path.join(args.location or '', 'main.html')
-        if os.path.exists(main_path):
-            webbrowser.open(main_path)
-        else:
-            start_new = input("New plogbook will be started in this folder, are you sure?(y/n)")
-            if 'y' in start_new.lower():
-                print("Now to finish up initiating write your first plog!")
-                args.write = True
-
-    if args.build_template:
-        plogbook.write_templates(files=args.build_template, override=args.override)
-    if args.build_templates:
-        print('creating templates that will be used by plogbook, check <plogbook>/templates')
-        plogbook.write_templates(override=args.override)
-    if args.write or args.editor:
-        if args.markdown:
-            if not MARKDOWN:
-                print('You need to install package "markdown2" for markdown conversion support, '
-                      'try: sudo pip install markdown2\nNo conversion will be made!')
-                args.markdown = False
-        plogbook.write_plog(editor=args.editor,
-                            markdown=args.markdown,
-                            convert_img=args.localize_images,
-                            override_theme=args.override_theme)
-
-    if args.find:
-        plogbook.find_plogs(recursive=False, pretty_output=args.pretty)
-    if args.findr:
-        plogbook.find_plogs(recursive=True, pretty_output=args.pretty)
-    if args.rebuild_cat_theme:
-        print('rebuilding theme for category: {}'.format(args.rebuild_cat_theme))
-        plogbook.write_theme(os.path.join(plogbook.location, args.rebuild_cat_theme))
-    if args.rebuild_main_theme:
-        print('rebuilding theme plogbook, loc: {}'.format(plogbook.location))
-        plogbook.write_theme()
-    if args.rebuild_cat_main:
-        print('rebuilding category main page  for category: {}'.format(args.rebuild_cat_main))
-        plogbook.write_cat_html(os.path.join(plogbook.location, args.rebuild_cat_main))
-    if args.rebuild_main:
-        print('rebuilding plogbook main page')
-        plogbook.write_main_html()
-    if args.find_categories:
-        plogbook.find_categories(pretty_output=args.pretty)
 
 
 if __name__ == '__main__':
-    run_argparse()
+    # run_argparse()
+    print(PlogBook.read_default_template('theme.css'))
