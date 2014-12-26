@@ -3,8 +3,6 @@ import os
 
 from plogbook import utils
 
-from plogbook.Plogbook import utils
-
 
 class Plog:
     """
