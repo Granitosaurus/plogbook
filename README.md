@@ -5,10 +5,14 @@ Plogbook is a console application for personal logging. It turns personal logs w
 
 Execute via executing plogbook folder i.e.: 
 >python plogbook  
-or install the package via:
->python setup.py install
-and run the plogbook from anywhere via:
->python -m plogbook
+
+or install the package via:  
+
+>python setup.py install  
+
+and run the plogbook from anywhere via:  
+
+>python -m plogbook  
 
 See --help for argument usage.  
 For examples see /examples/. For suggestions and bugs please see [issues](https://github.com/Granitas/plogbook/issues)
