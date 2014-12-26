@@ -3,8 +3,8 @@ plogbook
 
 Plogbook is a console application for personal logging. It turns personal logs written in console or favorite text editor into readable html pages. The personal logs(plogs for short) are located in categories which are part of the plogbook.
 
-Execute via: 
->python plogbook.py  
+Execute via executing plogbook folder i.e.: 
+>python plogbook  
 
 and see --help for argument usage.  
 For examples see /examples/. For suggestions and bugs please see [issues](https://github.com/Granitas/plogbook/issues)
@@ -12,7 +12,7 @@ For examples see /examples/. For suggestions and bugs please see [issues](https:
 First time usage
 ===
 1. Create a folder that will be your plogbook.
-2. Cd to that folder and simply execute the program via "python plogbook.py" answer yes when prompted.
+2. Cd to that folder (or use --location <folder location> argument and simply execute the program via "python plogbook" answer yes when prompted.
 3. Write your first plog to finish initiation!
 4. See --help argument and FAQ below for more info.
 
