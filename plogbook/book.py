@@ -292,7 +292,7 @@ class PlogBook:
             img_tags = re.findall('img.*?src="(.*?)"', html)
             for src in img_tags:
                 new_src = ''.join(re.findall('(\w+|\.)', src))
-                html.replace(src, new_src)
+                html = html.replace(src, new_src)
                 # Downloading and saving
                 with open(os.path.join(image_location, new_src), 'wb') as image_file:
                     image_source = urlopen(src).read()
